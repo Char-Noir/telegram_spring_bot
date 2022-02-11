@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "bot.token",
+      "type": "java.lang.String",
+      "description": "Token for bot. Given by BotFather."
+    },
+    {
+      "name": "bot.name",
+      "type": "java.lang.String",
+      "description": "Just custom bot name."
+    }
+  ] }
