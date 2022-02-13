@@ -15,10 +15,10 @@ import java.nio.charset.StandardCharsets;
 public class Translator {
 
     @Value("${google.translator.url}")
-    private static String url;
+    private String url;
 
-    public static String translate( String langTo, String text) throws IOException {
-
+    public String translate(String langTo, String text) throws IOException {
+        text = text.replace("\n"," ❤ ");
         String urlStr = url +
                 "?q=" + URLEncoder.encode(text, StandardCharsets.UTF_8) +
                 "&target=" + langTo +
@@ -27,12 +27,14 @@ public class Translator {
         StringBuilder response = new StringBuilder();
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestProperty("User-Agent", "Mozilla/5.0");
+        con.setRequestMethod("GET");
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String inputLine;
         while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
+            response.append(inputLine).append("\n");
         }
         in.close();
-        return response.toString();
+        //TODO:Fix '\n' issue; (translate api just removes this symbol)
+        return response.toString().replace("❤ ","\n");
     }
 }
