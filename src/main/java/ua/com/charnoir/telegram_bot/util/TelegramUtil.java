@@ -69,7 +69,6 @@ public class TelegramUtil {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < str.length(); i++) {
             char character = str.charAt(i);
-            System.out.println(character + "=="+ (int) character);
             if ((int) character >= 1 && (int) character <= 126) {
                 stringBuilder.append("\\");
             }

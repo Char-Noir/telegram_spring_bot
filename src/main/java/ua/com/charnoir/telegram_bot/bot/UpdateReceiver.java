@@ -8,10 +8,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ua.com.charnoir.telegram_bot.handler.CallBackHandler;
 import ua.com.charnoir.telegram_bot.handler.CommandHandler;
-import ua.com.charnoir.telegram_bot.handler.Handler;
 import ua.com.charnoir.telegram_bot.handler.TextHandler;
-import ua.com.charnoir.telegram_bot.persistense.entity.user.type.BotStateType;
 import ua.com.charnoir.telegram_bot.persistense.entity.user.User;
+import ua.com.charnoir.telegram_bot.persistense.entity.user.type.BotStateType;
 import ua.com.charnoir.telegram_bot.persistense.repository.UserRepository;
 import ua.com.charnoir.telegram_bot.util.TelegramUtil;
 
@@ -41,7 +40,7 @@ public class UpdateReceiver {
     // Обрабатываем полученный Update
     public List<PartialBotApiMethod<? extends Serializable>> handle(Update update) {
 
-        log.info("Received " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + " with message" + getMessage(update));
+        log.info("Received " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + " with message " + getMessage(update));
 
         // try-catch, чтобы обрабатывать незнакомые сообщения
         try {
@@ -85,14 +84,14 @@ public class UpdateReceiver {
                 final User user = userRepository.getByChatId(chatId)
                         .orElseGet(() -> userRepository.save(new User(chatId)));
                 // Ищем нужный обработчик и возвращаем результат его работы
-                return getHandlerByCallBackQuery(callbackQuery.getData()).handle(user, callbackQuery.getData());
+                return getHandlerByCallBackQuery(callbackQuery.getData()).handle(user, update);
             }
             //Если Update не подходит не под один тип "знакомых" сообщений, то бросаем ошибку
             throw new UnsupportedOperationException();
         } catch (Exception e) {
             // Получаем универсально айди чата с пользователем
             final long chatId = getChatId(update);
-            log.error("Catch error while working with " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + "with string" + getMessage(update) + "and error" + e.getMessage());
+            log.error("Catch error while working with " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + "with string " + getMessage(update) + " and error " + e.getClass() + " " + e.getMessage());
             // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
             final User user = userRepository.getByChatId(chatId)
                     .orElseGet(() -> userRepository.save(new User(chatId)));
@@ -103,7 +102,7 @@ public class UpdateReceiver {
     }
 
 
-    private Handler getHandlerByState(BotStateType state) {
+    private TextHandler getHandlerByState(BotStateType state) {
         return textHandlers.stream()
                 .filter(h -> h.operatedBotState() != null)
                 .filter(h -> h.operatedBotState().equals(state))
@@ -111,7 +110,7 @@ public class UpdateReceiver {
                 .orElseThrow(UnsupportedOperationException::new);
     }
 
-    private Handler getHandlerByCallBackQuery(String query) {
+    private CallBackHandler getHandlerByCallBackQuery(String query) {
         return callbackHandlers.stream()
                 .filter(h -> h.operatedCallBackQuery().stream()
                         .anyMatch(query::startsWith))
@@ -119,7 +118,7 @@ public class UpdateReceiver {
                 .orElseThrow(UnsupportedOperationException::new);
     }
 
-    private Handler getHandlerByCommand(String command) {
+    private CommandHandler getHandlerByCommand(String command) {
         return commandHandlers.stream()
                 .filter(h -> h.operatedCommand().stream()
                         .anyMatch(command::startsWith))

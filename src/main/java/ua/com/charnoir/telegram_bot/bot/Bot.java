@@ -4,8 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.com.charnoir.telegram_bot.util.TelegramUtil;
@@ -43,12 +45,32 @@ public class Bot extends TelegramLongPollingBot {
             messagesToSend.forEach(response -> {
                 if (response instanceof SendMessage) {
                     executeWithExceptionCheck((SendMessage) response);
+                } else if (response instanceof AnswerCallbackQuery) {
+                    executeWithExceptionCheck((AnswerCallbackQuery) response);
+                } else if (response instanceof EditMessageText) {
+                    executeWithExceptionCheck((EditMessageText) response);
                 }
             });
         }
     }
 
     public void executeWithExceptionCheck(SendMessage sendMessage) {
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getLocalizedMessage());
+        }
+    }
+
+    public void executeWithExceptionCheck(EditMessageText sendMessage) {
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getLocalizedMessage());
+        }
+    }
+
+    public void executeWithExceptionCheck(AnswerCallbackQuery sendMessage) {
         try {
             execute(sendMessage);
         } catch (TelegramApiException e) {
