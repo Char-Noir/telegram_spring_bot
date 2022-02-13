@@ -50,10 +50,31 @@ public class TelegramUtil {
         return message;
     }
 
-    public static List<PartialBotApiMethod<? extends Serializable>>  error(User user, Exception e, Update update) {
+    public static List<PartialBotApiMethod<? extends Serializable>> error(User user, Exception e, Update update) {
         SendMessage userMessage = error(user);
         SendMessage adminMessage = createMessageTemplate(ValueUtil.getCreator());
         adminMessage.setText("Catch error while working with " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + "with string" + getMessage(update) + "and error" + e.getMessage());
         return List.of(userMessage, adminMessage);
+    }
+
+    public static SendMessage createMessageTemplateMarkDownV2(String chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.enableMarkdownV2(true);
+        return message;
+    }
+
+    public static void escapeChars(SendMessage sendMessage) {
+        String str = sendMessage.getText();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            char character = str.charAt(i);
+            System.out.println(character + "=="+ (int) character);
+            if ((int) character >= 1 && (int) character <= 126) {
+                stringBuilder.append("\\");
+            }
+            stringBuilder.append(character);
+        }
+        sendMessage.setText(stringBuilder.toString());
     }
 }
