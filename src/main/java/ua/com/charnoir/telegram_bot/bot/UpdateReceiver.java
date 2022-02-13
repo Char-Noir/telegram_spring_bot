@@ -18,10 +18,12 @@ import ua.com.charnoir.telegram_bot.util.TelegramUtil;
 import java.io.Serializable;
 import java.util.List;
 
+import static ua.com.charnoir.telegram_bot.util.UpdateUtil.*;
+
 @Log4j2
 @Component
 public class UpdateReceiver {
-    // Храним доступные хендлеры в списке (подсмотрел у Miroha)
+    // Храним доступные хендлеры в списке
     private final List<TextHandler> textHandlers;
     private final List<CallBackHandler> callbackHandlers;
     private final List<CommandHandler> commandHandlers;
@@ -35,97 +37,69 @@ public class UpdateReceiver {
         this.userRepository = userRepository;
     }
 
+
     // Обрабатываем полученный Update
     public List<PartialBotApiMethod<? extends Serializable>> handle(Update update) {
 
-        log.info("Received "+getMessageType(update)+" from " + getChatId(update) + " aka " + getUserName(update) + "with message" + getMessage(update));
+        log.info("Received " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + " with message" + getMessage(update));
 
-        // try-catch, чтобы при несуществующей команде просто возвращать пустой список
+        // try-catch, чтобы обрабатывать незнакомые сообщения
         try {
             // Проверяем, если Update - сообщение с текстом
             if (isMessageWithText(update)) {
-                log.info("update from "+ getChatId(update) + " aka " + getUserName(update) + " mapped to text receiver");
+                log.info("update from " + getChatId(update) + " aka " + getUserName(update) + " mapped to text receiver");
                 // Получаем Message из Update
                 final Message message = update.getMessage();
                 // Получаем айди чата с пользователем
                 final long chatId = message.getFrom().getId();
 
                 // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
-                // Как раз на случай нового пользователя мы и сделали конструктор с одним параметром в классе User
                 final User user = userRepository.getByChatId(chatId)
                         .orElseGet(() -> userRepository.save(new User(chatId)));
                 user.setName(update.getMessage().getFrom().getFirstName());
                 // Ищем нужный обработчик и возвращаем результат его работы
                 return getHandlerByState(user.getBotState()).handle(user, message.getText());
 
+                // Проверяем, если Update - сообщение с командой
             } else if (isMessageWithCommand(update)) {
-                log.info("update from "+ getChatId(update) + " aka " + getUserName(update) + " mapped to command receiver");
+                log.info("update from " + getChatId(update) + " aka " + getUserName(update) + " mapped to command receiver");
                 // Получаем Message из Update
                 final Message message = update.getMessage();
                 // Получаем айди чата с пользователем
                 final long chatId = message.getFrom().getId();
 
                 // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
-                // Как раз на случай нового пользователя мы и сделали конструктор с одним параметром в классе User
                 final User user = userRepository.getByChatId(chatId)
                         .orElseGet(() -> userRepository.save(new User(chatId)));
                 user.setName(update.getMessage().getFrom().getFirstName());
                 // Ищем нужный обработчик и возвращаем результат его работы
                 return getHandlerByCommand(update.getMessage().getText()).handle(user, message.getText());
+                // Проверяем, если Update - каллбек
             } else if (update.hasCallbackQuery()) {
-                log.info("update from "+ getChatId(update) + " aka " + getUserName(update) + " mapped to callback receiver");
+                log.info("update from " + getChatId(update) + " aka " + getUserName(update) + " mapped to callback receiver");
+                // Получаем CallbackQuery из Update
                 final CallbackQuery callbackQuery = update.getCallbackQuery();
+                // Получаем айди чата с пользователем
                 final long chatId = callbackQuery.getFrom().getId();
+                // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
                 final User user = userRepository.getByChatId(chatId)
                         .orElseGet(() -> userRepository.save(new User(chatId)));
-
+                // Ищем нужный обработчик и возвращаем результат его работы
                 return getHandlerByCallBackQuery(callbackQuery.getData()).handle(user, callbackQuery.getData());
             }
-
+            //Если Update не подходит не под один тип "знакомых" сообщений, то бросаем ошибку
             throw new UnsupportedOperationException();
         } catch (Exception e) {
+            // Получаем универсально айди чата с пользователем
             final long chatId = getChatId(update);
-            log.error(e.getMessage());
+            log.error("Catch error while working with " + getMessageType(update) + " from " + getChatId(update) + " aka " + getUserName(update) + "with string" + getMessage(update) + "and error" + e.getMessage());
+            // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
             final User user = userRepository.getByChatId(chatId)
                     .orElseGet(() -> userRepository.save(new User(chatId)));
-            return List.of(TelegramUtil.error(user));
+            //Возвращаем пользователю сообщение об ошибке
+            //Возможно позже сделаю более подробную ошибку пользователю в зависимости от проблемы
+            return (TelegramUtil.error(user, e, update));
         }
-    }
-
-    private String getMessageType(Update update) {
-        if (update.hasMessage()) {
-            return "message";
-        } else if (update.hasCallbackQuery()) {
-            return "callback";
-        }
-        throw new IllegalArgumentException();
-    }
-
-    private String getMessage(Update update) {
-        if (update.hasMessage()) {
-            return update.getMessage().getText();
-        } else if (update.hasCallbackQuery()) {
-            return update.getCallbackQuery().getData();
-        }
-        throw new IllegalArgumentException();
-    }
-
-    private long getChatId(Update update) {
-        if (update.hasMessage()) {
-            return update.getMessage().getChatId();
-        } else if (update.hasCallbackQuery()) {
-            return update.getCallbackQuery().getFrom().getId();
-        }
-        throw new IllegalArgumentException();
-    }
-
-    private String getUserName(Update update) {
-        if (update.hasMessage()) {
-            return update.getMessage().getChat().getUserName();
-        } else if (update.hasCallbackQuery()) {
-            return update.getCallbackQuery().getFrom().getUserName();
-        }
-        throw new IllegalArgumentException();
     }
 
 

@@ -8,8 +8,13 @@ import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ua.com.charnoir.telegram_bot.util.TelegramUtil;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -23,14 +28,14 @@ public class Bot extends TelegramLongPollingBot {
     private String botUsername;
     @Value("${bot.token}")
     private String botToken;
+    @Value("${bot.creator.id}")
+    private String creator;
 
     public Bot(UpdateReceiver updateReceiver) {
         this.updateReceiver = updateReceiver;
     }
 
-    /* Перегружаем метод интерфейса LongPollingBot
-    Теперь при получении сообщения наш бот будет отвечать сообщением Hi!
-     */
+    // Перегружаем метод интерфейса LongPollingBot
     @Override
     public void onUpdateReceived(Update update) {
         List<PartialBotApiMethod<? extends Serializable>> messagesToSend = updateReceiver.handle(update);
@@ -49,6 +54,20 @@ public class Bot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error(e.getLocalizedMessage());
         }
+    }
+
+    @PreDestroy
+    public void onDestroy() {
+        SendMessage sendMessage = TelegramUtil.createMessageTemplate(creator);
+        sendMessage.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + ": Telegram bot  stopped!❎ \n#end");
+        executeWithExceptionCheck(sendMessage);
+    }
+
+    @PostConstruct
+    public void onInit() {
+        SendMessage sendMessage = TelegramUtil.createMessageTemplate(creator);
+        sendMessage.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + ": Telegram bot  started!✅ \n#start");
+        executeWithExceptionCheck(sendMessage);
     }
 
     // Геттеры, которые необходимы для наследования от TelegramLongPollingBot
