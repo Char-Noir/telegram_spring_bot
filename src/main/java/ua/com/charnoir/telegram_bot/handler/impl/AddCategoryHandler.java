@@ -14,6 +14,7 @@ import ua.com.charnoir.telegram_bot.util.TelegramUtil;
 
 import java.io.Serializable;
 import java.util.List;
+
 @Component
 public class AddCategoryHandler implements TextHandler {
 
@@ -29,9 +30,8 @@ public class AddCategoryHandler implements TextHandler {
         category.setName(message);
         categoryRepository.save(category);
         SendMessage sendMessage = TelegramUtil.createMessageTemplateMarkDownV2(user.getChatId().toString());
-        sendMessage.setText(String.format(BundleUtil.getString(user.getLanguage(), "choose_parent"),category.getName()));
+        sendMessage.setText(String.format(BundleUtil.getString(user.getLanguage(), "choose_parent"), category.getName()));
         TelegramUtil.escapeChars(sendMessage);
-        System.out.println(sendMessage);
         return List.of(sendMessage);
     }
 
