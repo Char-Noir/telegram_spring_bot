@@ -9,5 +9,16 @@
       "name": "bot.name",
       "type": "java.lang.String",
       "description": "Just custom bot name."
+    },
+    {
+      "name": "bot.creator",
+      "type": "java.lang.String",
+      "description": "Telegram nickname for creator. Starts from '@'."
+    },
+    {
+      "name": "bot.creator.id",
+      "type": "java.lang.String",
+      "description": "Id of chat for special messages like start, stop, error, etc."
     }
-  ] }
+  ]
+}
