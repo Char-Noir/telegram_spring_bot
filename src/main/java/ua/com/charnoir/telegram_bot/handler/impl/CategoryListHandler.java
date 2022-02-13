@@ -1,5 +1,6 @@
 package ua.com.charnoir.telegram_bot.handler.impl;
 
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -10,15 +11,18 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageTe
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import ua.com.charnoir.telegram_bot.google.Translator;
 import ua.com.charnoir.telegram_bot.handler.CallBackHandler;
 import ua.com.charnoir.telegram_bot.handler.CommandHandler;
 import ua.com.charnoir.telegram_bot.persistense.entity.post.Category;
 import ua.com.charnoir.telegram_bot.persistense.entity.user.User;
+import ua.com.charnoir.telegram_bot.persistense.entity.user.type.Language;
 import ua.com.charnoir.telegram_bot.persistense.entity.user.type.Status;
 import ua.com.charnoir.telegram_bot.persistense.repository.CategoryRepository;
 import ua.com.charnoir.telegram_bot.util.BundleUtil;
 import ua.com.charnoir.telegram_bot.util.TelegramUtil;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,17 +31,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TimeZone;
 
+@Log4j2
 @Component
 public class CategoryListHandler implements CommandHandler, CallBackHandler {
 
     public static final String COMMAND_CAT = "/categories";
     public static final String CALLBACK_CAT = "page:categories:";
-
     private static final int SIZE = 10;
-
+    private final Translator translator;
     private final CategoryRepository categoryRepository;
 
-    public CategoryListHandler(CategoryRepository categoryRepository) {
+    public CategoryListHandler(Translator translator, CategoryRepository categoryRepository) {
+        this.translator = translator;
         this.categoryRepository = categoryRepository;
     }
 
@@ -56,7 +61,7 @@ public class CategoryListHandler implements CommandHandler, CallBackHandler {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
         initMessage(page, stringBuilder, buttons);
         SendMessage sendMessage = TelegramUtil.createMessageTemplate(user.getChatId().toString());
-        sendMessage.setText(stringBuilder.toString());
+        sendMessage.setText(translate(stringBuilder.toString(), user.getLanguage()));
         sendMessage.setReplyMarkup(new InlineKeyboardMarkup(List.of(buttons)));
         return List.of(sendMessage);
     }
@@ -102,12 +107,12 @@ public class CategoryListHandler implements CommandHandler, CallBackHandler {
                 TimeZone.getDefault().toZoneId());
         if (dateTime.isBefore(LocalDateTime.now().minus(2, ChronoUnit.DAYS))) {
             SendMessage sendMessage = TelegramUtil.createMessageTemplate(user.getChatId().toString());
-            sendMessage.setText(stringBuilder.toString());
+            sendMessage.setText(translate(stringBuilder.toString(), user.getLanguage()));
             sendMessage.setReplyMarkup(new InlineKeyboardMarkup(List.of(buttons)));
             list.add(sendMessage);
         } else {
             EditMessageText editMessageText = new EditMessageText();
-            editMessageText.setText(stringBuilder.toString());
+            editMessageText.setText(translate(stringBuilder.toString(), user.getLanguage()));
             editMessageText.setReplyMarkup(new InlineKeyboardMarkup(List.of(buttons)));
             editMessageText.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
             editMessageText.setInlineMessageId(update.getCallbackQuery().getInlineMessageId());
@@ -119,6 +124,18 @@ public class CategoryListHandler implements CommandHandler, CallBackHandler {
         callbackQuery.setShowAlert(false);
         list.add(callbackQuery);
         return list;
+    }
+
+    private String translate(String str, Language language) {
+        try {
+            if(language!=Language.RUS){
+                return translator.translate(language.getTranslator(), str);
+            }
+           return str;
+        } catch (IOException e) {
+            log.error("Translator fails with string " + str + " on language " + language.getLocale() + " with error" + e.getMessage());
+            return str;
+        }
     }
 
 }
