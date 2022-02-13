@@ -3,6 +3,7 @@ package ua.com.charnoir.telegram_bot.handler.impl;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import ua.com.charnoir.telegram_bot.handler.CallBackHandler;
 import ua.com.charnoir.telegram_bot.handler.CommandHandler;
 import ua.com.charnoir.telegram_bot.persistense.entity.user.User;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import static ua.com.charnoir.telegram_bot.util.TelegramUtil.createInlineKeyboardButton;
 import static ua.com.charnoir.telegram_bot.util.TelegramUtil.createMessageTemplate;
+
 @Component
 public class AddCategoryStartHandler implements CommandHandler, CallBackHandler {
 
@@ -47,5 +49,10 @@ public class AddCategoryStartHandler implements CommandHandler, CallBackHandler 
     @Override
     public List<String> operatedCallBackQuery() {
         return List.of(CALLBACK);
+    }
+
+    @Override
+    public List<PartialBotApiMethod<? extends Serializable>> handle(User user, Update update) {
+        return handle(user, update.getCallbackQuery().getData());
     }
 }
